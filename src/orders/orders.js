@@ -1,21 +1,17 @@
-// MVP em memória: os pedidos são perdidos ao reiniciar o servidor.
-// Persistência em banco de dados será adicionada na próxima etapa.
-const orders = [];
+import { query } from "../db/database.js";
 
-export function createDraftOrder(items) {
-  if (!Array.isArray(items) || items.length === 0) {
-    throw new Error("Informe pelo menos um item.");
-  }
-  const order = {
-    id: `PED-${Date.now()}`,
-    status: "aguardando_validacao_humana",
-    items,
-    createdAt: new Date().toISOString()
-  };
-  orders.push(order);
-  return order;
+export async function createDraftOrder(items, customerPhone = null) {
+  if (!Array.isArray(items) || items.length === 0) throw new Error("Informe pelo menos um item.");
+  if (!process.env.DATABASE_URL) throw new Error("Banco de dados não configurado.");
+  const result = await query(
+    "INSERT INTO orders (customer_phone, status, items) VALUES ($1, 'aguardando_validacao_humana', $2) RETURNING id, customer_phone, status, items, created_at",
+    [customerPhone, JSON.stringify(items)]
+  );
+  return result.rows[0];
 }
 
-export function listOrders() {
-  return [...orders];
+export async function listOrders() {
+  if (!process.env.DATABASE_URL) return [];
+  const result = await query("SELECT id, customer_phone, status, items, created_at FROM orders ORDER BY created_at DESC LIMIT 100");
+  return result.rows;
 }
