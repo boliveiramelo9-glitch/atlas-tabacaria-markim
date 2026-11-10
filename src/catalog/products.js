@@ -4,9 +4,17 @@ import { query } from "../db/database.js";
 export async function listAvailableProducts() {
   if (!process.env.DATABASE_URL) return [];
   const result = await query(
-    "SELECT id, name, description, brand, model, price_cents, stock_quantity FROM products WHERE active = TRUE AND stock_quantity > 0 ORDER BY name"
+    "SELECT id, name, category, description, brand, model, price_cents, stock_quantity FROM products WHERE active = TRUE AND stock_quantity > 0 ORDER BY name"
   );
-  return result.rows.map((p) => ({ ...p, price: (p.price_cents / 100).toFixed(2) }));
+  return result.rows.map((p) => ({
+    id: p.id,
+    nome: p.name,
+    categoria: p.category || p.model || "",
+    marca: p.brand || "",
+    descricao: p.description || "",
+    preco: (p.price_cents / 100).toFixed(2),
+    estoque: p.stock_quantity,
+  }));
 }
 
 export async function findProductById(id) {
