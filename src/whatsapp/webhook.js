@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { listAvailableProducts } from "../catalog/products.js";
-import { replyToCustomer } from "../agent/openai.js";
+import { responder } from "../agent/gemini.js";
 import { sendWhatsAppMessage } from "./send.js";
 
 export const whatsappRouter = Router();
@@ -23,9 +23,16 @@ whatsappRouter.post("/webhook", async (req, res) => {
         const value = change.value ?? {};
         for (const message of value.messages ?? []) {
           if (message.type !== "text" || !message.from || !message.text?.body) continue;
-          const products = await listAvailableProducts();
-          const answer = await replyToCustomer(message.text.body, products);
-          await sendWhatsAppMessage(message.from, answer);
+          const catalogo = await listAvailableProducts();
+          const { texto, transferir } = await responder({
+            historico: [],
+            mensagem: message.text.body,
+            catalogo,
+          });
+          await sendWhatsAppMessage(message.from, texto);
+          if (transferir) {
+            console.warn(`Atendimento requer funcionário. Cliente: ${message.from}`);
+          }
         }
       }
     }
